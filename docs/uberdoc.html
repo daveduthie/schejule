@@ -2920,25 +2920,17 @@ net.brehaut.ClojureTools = (function (SH) {
          feasible*)))</pre></td></tr><tr><td class="docs"><h2>Attempt to filter on `:endby` constraints</h2>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>Filters feasible task orderings by whether jobs will be done on time.
   Returns a lazy sequence.</p>
-
-<p>I'm a bit worried about the (lack of) speed of this gargantuan filter function!</p>
 </td><td class="codes"><pre class="brush: clojure">(defn due-filter*
   [tasks]
   (keep (fn [tasks]
           (reduce (fn [solution task]
-                    (let [; Destructuring bind to get useful info from task.
-                          {:keys [machine duration job id endby]} task
-                            ; Get minimum start time of task.
-                            ; Task cannot begin until prior tasks in job have been completed
-                            ; AND prior jobs on machine have been completed.
+                    (let [{:keys [machine duration job id endby]} task
                           end-time (+ duration (max
                                                 (or (get-in solution [:machines machine]) 0)
                                                 (or (get-in solution [:jobs job]) 0)))]
-                        ; Check if `:endby` constraint has been violated.
+                      ;; Check if `:endby` constraint has been violated.
                       (if (and endby (&lt; endby end-time))
                         (reduced nil)
-                        ; Update solution with task on appropriate machine and new
-                        ; total processing time for job
                         (-&gt; solution
                             (assoc-in [:machines machine] end-time)
                             (assoc-in [:jobs job] end-time)
@@ -2953,7 +2945,7 @@ net.brehaut.ClojureTools = (function (SH) {
        (map second)
        (apply max)))</pre></td></tr><tr><td class="docs"><p>Searches for a solution and returns the best found in <code>timeout</code> milliseconds.
   "Best" means the minimum workspan, given the <code>:endby</code> constraints encoded into the tasks.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn optimal-schedule
+</td><td class="codes"><pre class="brush: clojure">(defn adequate-schedule
   [millis tasks]
   (with-timeout (+ millis 10)
     (loop [time          (System/currentTimeMillis)

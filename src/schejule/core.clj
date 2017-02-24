@@ -60,28 +60,21 @@
 
 ;; ## Attempt to filter on `:endby` constraints
 
-;; I'm a bit worried about the (lack of) speed of this gargantuan filter function!
 (defn due-filter*
   "Filters feasible task orderings by whether jobs will be done on time.
   Returns a lazy sequence."
   [tasks]
   (keep (fn [tasks]
           (reduce (fn [solution task]
-                    (let [; Destructuring bind to get useful info from task.
-                          {:keys [machine duration job id endby]} task
+                    (let [{:keys [machine duration job id endby]} task
 
-                            ; Get minimum start time of task.
-                            ; Task cannot begin until prior tasks in job have been completed
-                            ; AND prior jobs on machine have been completed.
                           end-time (+ duration (max
                                                 (or (get-in solution [:machines machine]) 0)
                                                 (or (get-in solution [:jobs job]) 0)))]
 
-                        ; Check if `:endby` constraint has been violated.
+                      ;; Check if `:endby` constraint has been violated.
                       (if (and endby (< endby end-time))
                         (reduced nil)
-                        ; Update solution with task on appropriate machine and new
-                        ; total processing time for job
                         (-> solution
                             (assoc-in [:machines machine] end-time)
                             (assoc-in [:jobs job] end-time)
@@ -99,7 +92,7 @@
        (map second)
        (apply max)))
 
-(defn optimal-schedule
+(defn adequate-schedule
   "Searches for a solution and returns the best found in `timeout` milliseconds.
   \"Best\" means the minimum workspan, given the `:endby` constraints encoded into the tasks."
   [millis tasks]
