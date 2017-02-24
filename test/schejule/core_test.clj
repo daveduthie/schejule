@@ -90,5 +90,5 @@
          630)))
 
 (deftest optimal-schedule-test
-  (is (= (with-timeout 100 (optimal-schedule 100 sample-tasks-3))
+  (is (= (optimal-schedule 100 sample-tasks-3)
          nil)))

@@ -66,30 +66,30 @@
   Returns a lazy sequence."
   [tasks]
   (keep (fn [tasks]
-            (reduce (fn [solution task]
-                      (let [; Destructuring bind to get useful info from task.
-                            {:keys [machine duration job id endby]} task
+          (reduce (fn [solution task]
+                    (let [; Destructuring bind to get useful info from task.
+                          {:keys [machine duration job id endby]} task
 
                             ; Get minimum start time of task.
                             ; Task cannot begin until prior tasks in job have been completed
                             ; AND prior jobs on machine have been completed.
-                            end-time (+ duration (max
-                                                  (or (get-in solution [:machines machine]) 0)
-                                                  (or (get-in solution [:jobs job]) 0)))]
+                          end-time (+ duration (max
+                                                (or (get-in solution [:machines machine]) 0)
+                                                (or (get-in solution [:jobs job]) 0)))]
 
                         ; Check if `:endby` constraint has been violated.
-                        (if (and endby (< endby end-time))
-                          (reduced nil)
+                      (if (and endby (< endby end-time))
+                        (reduced nil)
                         ; Update solution with task on appropriate machine and new
                         ; total processing time for job
-                          (-> solution
-                              (assoc-in [:machines machine] end-time)
-                              (assoc-in [:jobs job] end-time)
-                              (update :tasks #(conj % (assoc task :end-time end-time)))))))
-                    {}
-                    tasks))
+                        (-> solution
+                            (assoc-in [:machines machine] end-time)
+                            (assoc-in [:jobs job] end-time)
+                            (update :tasks #(conj % (assoc task :end-time end-time)))))))
+                  {}
+                  tasks))
 
-          (constructo* tasks)))
+        (constructo* tasks)))
 
 (defn get-workspan
   "Get the workspan of a solution."
@@ -103,13 +103,14 @@
   "Searches for a solution and returns the best found in `timeout` milliseconds.
   \"Best\" means the minimum workspan, given the `:endby` constraints encoded into the tasks."
   [millis tasks]
-  (loop [time          (System/currentTimeMillis)
-         [head & tail] (due-filter* tasks)
-         best          head]
+  (with-timeout (+ millis 10)
+    (loop [time          (System/currentTimeMillis)
+           [head & tail] (due-filter* tasks)
+           best          head]
 
-    (if (or (not head) (< millis (- (System/currentTimeMillis) time)))
-      best
-      (let [best (if (< (get-workspan head) (get-workspan best))
-                   head
-                   best)]
-        (recur time tail best)))))
+      (if (or (not head) (< millis (- (System/currentTimeMillis) time)))
+        best
+        (let [best (if (< (get-workspan head) (get-workspan best))
+                     head
+                     best)]
+          (recur time tail best))))))
