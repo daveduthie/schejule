@@ -4,7 +4,7 @@ Schejule is a library for finding adequate solutions to job shop problems.
 
 See [schejule -- Marginalia](https://daveduthie.github.io/schejule/) for details
 
-Schejule has not been tested very thoroughly at all. at your own risk.
+Schejule has not been tested very thoroughly at all. Use at your own risk.
 
 ## Usage
 
