@@ -2866,97 +2866,358 @@ net.brehaut.ClojureTools = (function (SH) {
   };
 })(SyntaxHighlighter);
 </script><title>schejule -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="github.com/daveduthie/schejule">schejule</a></h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>a job shop scheduling library for Clojure</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.8.0</td></tr><tr><td class="dep-name">org.clojure/core.logic</td><td class="dotted"><hr /></td><td class="dep-version">0.8.11</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#schejule.core">schejule.core</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.core" name="schejule.core"><h1 class="project-name">schejule.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.8.0</td></tr><tr><td class="dep-name">org.clojure/core.logic</td><td class="dotted"><hr /></td><td class="dep-version">0.8.11</td></tr><tr><td class="dep-name">org.clojure/core.async</td><td class="dotted"><hr /></td><td class="dep-version">0.3.441</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#schejule.analyser">schejule.analyser</a></li><li><a href="#schejule.core">schejule.core</a></li><li><a href="#schejule.generator">schejule.generator</a></li><li><a href="#schejule">schejule</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.analyser" name="schejule.analyser"><h1 class="project-name">schejule.analyser</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns schejule.analyser
+  (:require [schejule.generator :as gen]))</pre></td></tr><tr><td class="docs"><p>(defn vec-subset?
+  "Returns true if <code>sub</code> contains a subset of <code>a-vector</code>'s elements in the same order as <code>a-vector</code>.
+  Returns false otherwise."
+  [sub a-vector]
+  (loop [v1 sub
+         v2 a-vector]
+    (cond
+      (nil? v1)                 true
+      (nil? v2)                 false
+      (= (first v1) (first v2)) (recur (next v1) (next v2))
+      :else                     (recur v1 (next v2)))))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Get the workspan of a solution.
+  The workspan is the finish time of the last task to be completed.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-workspan
+  [solution]
+  (if (empty? solution)
+    nil
+    (-&gt;&gt; solution :machines (map second) (apply max))))</pre></td></tr><tr><td class="docs"><p>Simulates schedule execution, checking whether <code>:endby</code>-constrained jobs will be done on time.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn simulate-schedule*
+  [tasks constraints]
+  (map (fn [tasks]
+         (reduce (fn [solution task]
+                   (let [{:keys [machine duration job id endby]} task
+                         end-time (+ duration (max
+                                               (or (get-in solution [:machines machine]) 0)
+                                               (or (get-in solution [:jobs job]) 0)))]
+                      ;; Check if `:endby` constraint has been violated.
+                     (let [new-sol (-&gt; solution
+                                       (assoc-in [:machines machine] end-time)
+                                       (assoc-in [:jobs job] end-time)
+                                       (update :tasks #(conj % (assoc task :end-time end-time))))]
+                       (if (and endby (&lt; endby end-time))
+                         (reduced (assoc new-sol :failure id))
+                         new-sol))))
+                 {}
+                 tasks))
+       (gen/gen-schedule* tasks constraints)))</pre></td></tr><tr><td class="docs"><p>TODO: write distil-rule. It should take a map describing a failed schedule, as emitted by <code>simulate-schedule*</code>, and return the smallest possible set of tasks which cannot precede the failed task (or one of its predecessors).</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>'Rewinds' a bad schedule to identify which subsequence of tasks contributed to the failure</p>
+
+<p>2017-03-13 01:23 NEW THINKING
+Bind only tasks at job-boundaries for less binding overall
+rather than [a . b c d . e f] -> [a b] [d e] -> [a b d e]</p>
+</td><td class="codes"><pre class="brush: clojure">(defn toxic-seq
+  [bad-schedule]
+  (loop [current       (first (bad-schedule :tasks))
+         [head &amp; tail] (next (bad-schedule :tasks))
+         bottleneck    [current]
+         start         (- (current :end-time) (current :duration))]
+    (cond
+      (nil? head)
+      bottleneck
+      (and (= start (head :end-time))
+           (or (= (current :job) (head :job))
+               (= (current :machine) (head :machine))))
+      (recur head tail (cons head bottleneck) (- start (head :duration)))
+      :else
+      (recur current tail bottleneck start))))</pre></td></tr><tr><td class="docs"><p>Wraps <code>toxic-seq</code>, trimming result to focus on first and last tasks in each job</p>
+</td><td class="codes"><pre class="brush: clojure">(defn distil-rule
+  [bad-schedule]
+  (partition 2 (rest (mapcat (comp (fn [tasks] [(first tasks) (last tasks)]) (partial map :id))
+                             (partition-by :job (toxic-seq bad-schedule))))))</pre></td></tr><tr><td class="docs"><p>Checks whether t1 implies t2</p>
+</td><td class="codes"><pre class="brush: clojure">(defn implies?
+  [lookup [a b] [c d]]
+  (or (and (= a c) (= b d))
+      (and (and (= (lookup a) (lookup c))
+                (= (lookup b) (lookup d)))
+           (and (&lt;= a c) (&gt;= b d)))))</pre></td></tr><tr><td class="docs"><p>Checks whether a rule implies another rule</p>
+</td><td class="codes"><pre class="brush: clojure">(defn rule-implies?
+  [lookup rule1 rule2]
+  (loop [r1 rule1
+         r2 rule2]
+    (cond
+      (nil? r1)                               true
+      (nil? r2)                               false
+      (implies? lookup (first r1) (first r2)) (recur (next r1) (next r2))
+      :else                                   (recur r1 (next r2)))))</pre></td></tr><tr><td class="docs"><p>Yeah</p>
+
+<p>This needs to get smarter
+a1 > b2 sub-implies a1 > b1</p>
+</td><td class="codes"><pre class="brush: clojure">(defn accrete-rules
+  [lookup rules new-rule]
+  (if (some #(rule-implies? lookup % new-rule) rules)
+    rules
+    (conj (remove #(rule-implies? lookup new-rule %) rules)
+          new-rule)))</pre></td></tr><tr><td class="docs"><p>(defn accrete-rules [tasks rules new-rule]
+  (if (some #(vec-subset? % new-rule) rules)
+    rules
+    (conj (remove #(vec-subset? new-rule %) rules)
+          new-rule)))</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(use 'schejule.core-test)</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-failure
+  {:machines {9 271, 7 268, 2 343, 1 460},
+   :jobs {"aag368" 271, "qrs991" 268, "twb787" 186, "xyo468" 460},
+   :tasks '({:id 4, :job "xyo468", :machine 1, :duration 117, :endby 274, :ord 4, :end-time 460}
+            {:id 3, :job "xyo468", :machine 2, :duration 157, :ord 3, :end-time 343}
+            {:id 2, :job "twb787", :machine 2, :duration 186, :ord 2, :end-time 186}
+            {:id 1, :job "qrs991", :machine 7, :duration 268, :ord 1, :end-time 268}
+            {:id 0, :job "aag368", :machine 9, :duration 271, :ord 0, :end-time 271}),
+   :failure 4})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure
+  {:machines {5 215, 11 311, 4 781, 7 946, 9 1099},
+   :jobs {"brq890" 946, "jtj163" 927, "pke479" 1099},
+   :tasks '({:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 7, :end-time 1099}
+            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 6, :end-time 927}
+            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 5, :end-time 781}
+            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 4, :end-time 946}
+            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 3, :end-time 685}
+            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 2, :end-time 601}
+            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 7})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(distil-rule a-big-failure)
+((3 5) (6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure-2
+  {:machines {5 215, 11 311, 4 781, 7 1042, 9 1015},
+   :jobs {"brq890" 1042, "jtj163" 843, "pke479" 1015},
+   :tasks '({:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 7, :end-time 1015}
+            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 6, :end-time 843}
+            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 5, :end-time 1042}
+            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 4, :end-time 781}
+            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 3, :end-time 697}
+            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 2, :end-time 601}
+            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 7})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(distil-rule a-big-failure-2)
+((2 5) (6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>=>(0 1 2 5 6 7)</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(accrete-rules (schejule/by-job (:tasks a-big-failure-2))
+               '(((3 5) (6 7)))
+               '((2 5) (6 7)))
+=>((0 1 2 5 6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(some #(and (% :failure) %) (simulate-schedule* sample-1-cleaned ['(0 1 2 5 6 7)]))</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def a-big-failure-3
+  {:machines {5 1918, 11 311, 4 1983, 7 1212, 9 812, 0 114, 3 1429, 6 880},
+   :jobs {&quot;brq890&quot; 946, &quot;jtj163&quot; 242, &quot;pke479&quot; 414, &quot;uym843&quot; 880, &quot;wim276&quot; 1983},
+   :tasks '({:id 17, :job &quot;wim276&quot;, :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1983}
+            {:id 16, :job &quot;wim276&quot;, :machine 5, :duration 234, :ord 16, :end-time 1918}
+            {:id 15, :job &quot;wim276&quot;, :machine 5, :duration 255, :ord 15, :end-time 1684}
+            {:id 14, :job &quot;wim276&quot;, :machine 3, :duration 217, :ord 14, :end-time 1429}
+            {:id 13, :job &quot;wim276&quot;, :machine 7, :duration 266, :ord 13, :end-time 1212}
+            {:id 12, :job &quot;uym843&quot;, :machine 6, :duration 68, :endby 6800, :ord 12, :end-time 880}
+            {:id 11, :job &quot;uym843&quot;, :machine 9, :duration 61, :ord 11, :end-time 812}
+            {:id 10, :job &quot;uym843&quot;, :machine 3, :duration 293, :ord 10, :end-time 751}
+            {:id 9, :job &quot;uym843&quot;, :machine 5, :duration 243, :ord 9, :end-time 458}
+            {:id 8, :job &quot;uym843&quot;, :machine 0, :duration 114, :ord 8, :end-time 114}
+            {:id 7, :job &quot;pke479&quot;, :machine 9, :duration 172, :endby 600, :ord 7, :end-time 414}
+            {:id 6, :job &quot;jtj163&quot;, :machine 9, :duration 146, :ord 6, :end-time 242}
+            {:id 4, :job &quot;brq890&quot;, :machine 7, :duration 261, :ord 5, :end-time 946}
+            {:id 3, :job &quot;brq890&quot;, :machine 4, :duration 84, :ord 4, :end-time 685}
+            {:id 2, :job &quot;brq890&quot;, :machine 4, :duration 290, :ord 3, :end-time 601}
+            {:id 5, :job &quot;jtj163&quot;, :machine 4, :duration 96, :ord 2, :end-time 96}
+            {:id 1, :job &quot;brq890&quot;, :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job &quot;brq890&quot;, :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 17})</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(distil-rule a-big-failure-3)</pre></td></tr><tr><td class="docs"><p>((4 13))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>=>(0 1 2 3 4 13 14 15 16 17)</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(accrete-rules (schejule/by-job (:tasks a-big-failure-3)) '(((2 5) (6 7))) '((4 13)))</pre></td></tr><tr><td class="docs"><p>(((4 13)) ((2 5) (6 7)))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>=>((0 1 2 3 4 13 14 15 16 17) (0 1 2 5 6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(some #(and (% :failure) %) (simulate-schedule* sample-1-cleaned '((0 1 2 3 4 13 14 15 16 17) (0 1 2 5 6 7))))</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def a-big-failure-4
+  {:machines {5 1457, 11 311, 4 1522, 7 946, 9 812, 0 114, 3 968, 6 880},
+   :jobs {&quot;brq890&quot; 946, &quot;jtj163&quot; 242, &quot;wim276&quot; 1522, &quot;pke479&quot; 414, &quot;uym843&quot; 880},
+   :tasks '({:id 17, :job &quot;wim276&quot;, :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1522}
+            {:id 16, :job &quot;wim276&quot;, :machine 5, :duration 234, :ord 16, :end-time 1457}
+            {:id 15, :job &quot;wim276&quot;, :machine 5, :duration 255, :ord 15, :end-time 1223}
+            {:id 14, :job &quot;wim276&quot;, :machine 3, :duration 217, :ord 14, :end-time 968}
+            {:id 12, :job &quot;uym843&quot;, :machine 6, :duration 68, :endby 6800, :ord 13, :end-time 880}
+            {:id 11, :job &quot;uym843&quot;, :machine 9, :duration 61, :ord 12, :end-time 812}
+            {:id 10, :job &quot;uym843&quot;, :machine 3, :duration 293, :ord 11, :end-time 751}
+            {:id 9, :job &quot;uym843&quot;, :machine 5, :duration 243, :ord 10, :end-time 458}
+            {:id 8, :job &quot;uym843&quot;, :machine 0, :duration 114, :ord 9, :end-time 114}
+            {:id 7, :job &quot;pke479&quot;, :machine 9, :duration 172, :endby 600, :ord 8, :end-time 414}
+            {:id 6, :job &quot;jtj163&quot;, :machine 9, :duration 146, :ord 7, :end-time 242}
+            {:id 4, :job &quot;brq890&quot;, :machine 7, :duration 261, :ord 6, :end-time 946}
+            {:id 13, :job &quot;wim276&quot;, :machine 7, :duration 266, :ord 5, :end-time 266}
+            {:id 3, :job &quot;brq890&quot;, :machine 4, :duration 84, :ord 4, :end-time 685}
+            {:id 2, :job &quot;brq890&quot;, :machine 4, :duration 290, :ord 3, :end-time 601}
+            {:id 5, :job &quot;jtj163&quot;, :machine 4, :duration 96, :ord 2, :end-time 96}
+            {:id 1, :job &quot;brq890&quot;, :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job &quot;brq890&quot;, :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 17})</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(distil-rule a-big-failure-4)</pre></td></tr><tr><td class="docs"><p>((0 9) (10 14))</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(accrete-rules (schejule/by-job (:tasks a-big-failure-4))
+               '(((4 13))
+                 ((2 5) (6 7)))
+               '((0 9) (10 14)))</pre></td></tr><tr><td class="docs"><p>(((0 9) (10 14)) ((4 13)) ((2 5) (6 7)))</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def a-big-failure-5
+  {:machines {4 1421, 9 711, 0 114, 5 1356, 7 1303, 11 668, 3 867, 6 779},
+   :jobs {&quot;jtj163&quot; 242, &quot;pke479&quot; 414, &quot;uym843&quot; 779, &quot;wim276&quot; 1421, &quot;brq890&quot; 1303},
+   :tasks '({:id 17, :job &quot;wim276&quot;, :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1421}
+            {:id 16, :job &quot;wim276&quot;, :machine 5, :duration 234, :ord 16, :end-time 1356}
+            {:id 15, :job &quot;wim276&quot;, :machine 5, :duration 255, :ord 15, :end-time 1122}
+            {:id 14, :job &quot;wim276&quot;, :machine 3, :duration 217, :ord 14, :end-time 867}
+            {:id 12, :job &quot;uym843&quot;, :machine 6, :duration 68, :endby 6800, :ord 13, :end-time 779}
+            {:id 11, :job &quot;uym843&quot;, :machine 9, :duration 61, :ord 12, :end-time 711}
+            {:id 10, :job &quot;uym843&quot;, :machine 3, :duration 293, :ord 11, :end-time 650}
+            {:id 4, :job &quot;brq890&quot;, :machine 7, :duration 261, :ord 10, :end-time 1303}
+            {:id 3, :job &quot;brq890&quot;, :machine 4, :duration 84, :ord 9, :end-time 1042}
+            {:id 2, :job &quot;brq890&quot;, :machine 4, :duration 290, :ord 8, :end-time 958}
+            {:id 1, :job &quot;brq890&quot;, :machine 11, :duration 96, :ord 7, :end-time 668}
+            {:id 0, :job &quot;brq890&quot;, :machine 5, :duration 215, :ord 6, :end-time 572}
+            {:id 13, :job &quot;wim276&quot;, :machine 7, :duration 266, :ord 5, :end-time 266}
+            {:id 9, :job &quot;uym843&quot;, :machine 5, :duration 243, :ord 4, :end-time 357}
+            {:id 8, :job &quot;uym843&quot;, :machine 0, :duration 114, :ord 3, :end-time 114}
+            {:id 7, :job &quot;pke479&quot;, :machine 9, :duration 172, :endby 600, :ord 2, :end-time 414}
+            {:id 6, :job &quot;jtj163&quot;, :machine 9, :duration 146, :ord 1, :end-time 242}
+            {:id 5, :job &quot;jtj163&quot;, :machine 4, :duration 96, :ord 0, :end-time 96}),
+   :failure 17})</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(distil-rule a-big-failure-5)</pre></td></tr><tr><td class="docs"><p>((10 14))</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(accrete-rules (schejule/by-job (:tasks a-big-failure-5))
+               '(((0 9) (10 14)) ((4 13)) ((2 5) (6 7)))
+               '((10 14)))</pre></td></tr><tr><td class="docs"><p> Why? (0 9 10 14 15 16 17)
+      (8 9 10 14 15 16 17)
+       ?</p>
+</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.core" name="schejule.core"><h1 class="project-name">schejule.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns schejule.core
   (:refer-clojure :exclude [==])
-  (:require [clojure.core.logic :refer [== all everyg lvar run* succeed] :as l]
-            [clojure.core.logic.fd :as fd]))</pre></td></tr><tr><td class="docs"><h2>define helper macro to timeout a blocking function call</h2>
-
-<p><a href="http://stackoverflow.com/questions/6694530/executing-a-function-with-a-timeout/6697469#6697469">Stack Overflow</a></p>
-</td><td class="codes"><pre class="brush: clojure">(defmacro with-timeout [millis &amp; body]
-  `(let [future# (future ~@body)]
-     (try
-       (.get future# ~millis java.util.concurrent.TimeUnit/MILLISECONDS)
-       (catch java.util.concurrent.TimeoutException x#
-         (do
-           (future-cancel future#)
-           nil)))))</pre></td></tr><tr><td class="docs"><p>Sorts tasks by <code>:job</code>, then by <code>:id</code> to prepare for <code>solvo</code></p>
-
-<h2>Ratiocinate</h2>
-</td><td class="codes"><pre class="brush: clojure">(defn sort-tasks
-  [tasks]
-  (-&gt;&gt; tasks (sort-by :job) (sort-by :id)))</pre></td></tr><tr><td class="docs"><p>Binds tasks in a job to occur in the correct order.
+  (:require [clojure.core.logic :refer [== all conde conso defne everyg
+                                        fresh lvar nilo run* succeed] :as l]
+            [clojure.core.logic.fd :as fd]))</pre></td></tr><tr><td class="docs"><p>TODO: split functions into separate namespaces:
+generator - solvo<em>, constructo</em> and (as yet unwritten relational constraint specifier)
+analyser - due-filter* and constraint finder</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><h2>Helper functions</h2>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defne notmaxo [x l]
+  ([x [e]] (fd/&lt; x e))
+  ([x [h1 h2 . t]]
+   (fresh [l']
+     (conde
+      [(fd/&gt;  h1 h2) (conso h1 t l')]
+      [(fd/&lt;= h1 h2) (conso h2 t l')])
+     (notmaxo x l'))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(run* [q]
+  (fd/in q (fd/interval 100))
+  (notmaxo q [3 4 1]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defne not-orderedo [l]
+  ;; ([[h1 t]] (fd/&lt; h t))
+  ([[h1 h2 . t]]
+   (fresh [l']
+     (conde
+      [(fd/&lt; h2 h1)]
+      [(conso h2 t l') (not-orderedo l')]))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(let [vars (repeatedly 4 lvar)
+      constrained-lvars ()]
+  (l/run 10 [q]
+    (== q vars)
+    (fd/distinct vars)
+    (everyg #(fd/in % (fd/interval 3)) vars)
+    (not-orderedo vars)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.generator" name="schejule.generator"><h1 class="project-name">schejule.generator</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns schejule.generator
+  (:refer-clojure :exclude [==])
+  (:require [clojure.core.logic :refer [== all defne everyg lvar run* succeed] :as l]
+            [clojure.core.logic.fd :as fd]))</pre></td></tr><tr><td class="docs"><h2>Helper functions</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Binds vars in a job to occur in the correct order.
   <code>lengths</code> must be a seq of integers defining no. of tasks in nth job.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn init-jobs
-  [tasks lengths]
+</td><td class="codes"><pre class="brush: clojure">(defn bind-intra-job-ordero
+  [vars lengths]
   (if (seq lengths)
     (let [l (first lengths)]
       (all
-       (everyg (fn [[x y]] (fd/&lt; x y)) (partition 2 1 (take l tasks)))
-       (init-jobs (drop l tasks) (next lengths))))
-    succeed))</pre></td></tr><tr><td class="docs"><p>Find a feasible ordering for tasks.
-  tasks <strong>MUST</strong> be sorted by <code>:job</code>, then by <code>:id</code>.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn solvo*
-  [tasks]
-  (let [n (count tasks)
+       (everyg (fn [[x y]] (fd/&lt; x y)) (partition 2 1 (take l vars)))
+       (bind-intra-job-ordero (drop l vars) (next lengths))))
+    succeed))</pre></td></tr><tr><td class="docs"><p>Like <code>select-keys</code> but returns a plain vector of items from coll.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn select-nths
+  [from ks]
+  (reduce (fn [result s] (conj result (nth from s)))
+          []
+          ks))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defne not-ordered-pairso [l]
+  ([[[a b] . _]] (fd/&gt; a b))
+  ([[[a b] . tail]] (fd/&lt; a b) (not-ordered-pairso tail)))</pre></td></tr><tr><td class="docs"><h2>Workhorse</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Find a feasible ordering for tasks.
+  Returns a lazy sequence.</p>
+
+<p>TODO: experiment with passing run* an atom with a goal inside,
+realising part of the results,
+updating the atom,
+then realising the rest of the results.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn gen-sequence*
+  [tasks constraints]
+  (let [n       (count tasks)
+        dom     (dec n)
         lengths (-&gt;&gt; tasks (partition-by :job) (map count))
-        vars (repeatedly n lvar)]
+        vars    (repeatedly n lvar)
+        rules   (map (fn [c]
+                       (map (partial select-nths vars) c))
+                     constraints)]
     (run* [q]
           (== q vars)
-          (init-jobs vars lengths)
-          (everyg #(fd/in % (fd/interval (- n 1))) vars)
-          (fd/distinct vars))))</pre></td></tr><tr><td class="docs"><p>Wraps solvo*. Associates a sequence of ords with the matching tasks.
+          (fd/distinct vars)
+          (everyg #(fd/in % (fd/interval dom)) vars)
+          (bind-intra-job-ordero vars lengths)
+          (everyg #(not-ordered-pairso %) rules))))</pre></td></tr><tr><td class="docs"><p>Wraps gen-sequence*. Associates a sequence of ords with the matching tasks.
+  Tasks <strong>MUST</strong> be sorted by <code>:job</code>, then by <code>:id</code>.
   Returns a lazy sequence.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn constructo*
-  [tasks]
-  (let [ts        (sort-tasks tasks)
-        feasible* (solvo* ts)]
+</td><td class="codes"><pre class="brush: clojure">(defn gen-schedule*
+  [tasks constraints]
+  (let [feasible* (gen-sequence* tasks constraints)]
     (map (fn [tasks ords]
-           (sort-by :ord (map (fn [t ord]
-                                (assoc t :ord ord))
+           (sort-by :ord (map (fn [t ord] (assoc t :ord ord))
                               tasks
                               ords)))
-         (repeat ts)
-         feasible*)))</pre></td></tr><tr><td class="docs"><h2>Attempt to filter on `:endby` constraints</h2>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Filters feasible task orderings by whether jobs will be done on time.
-  Returns a lazy sequence.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn due-filter*
+         (repeat tasks)
+         feasible*)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule" name="schejule"><h1 class="project-name">schejule</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ns schejule
+  (:require [schejule.generator :as gen]
+            [schejule.analyser :as z]
+            [clojure.core.async :refer [chan go go-loop thread &gt;! &gt;!! &lt;! &lt;!!] :as a]))</pre></td></tr><tr><td class="docs"><h2>Helper functions</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Sort by <code>:job</code>. Within a job, sort by <code>:id</code></p>
+</td><td class="codes"><pre class="brush: clojure">(defn sort-tasks
   [tasks]
-  (keep (fn [tasks]
-          (reduce (fn [solution task]
-                    (let [{:keys [machine duration job id endby]} task
-                          end-time (+ duration (max
-                                                (or (get-in solution [:machines machine]) 0)
-                                                (or (get-in solution [:jobs job]) 0)))]
-                      ;; Check if `:endby` constraint has been violated.
-                      (if (and endby (&lt; endby end-time))
-                        (reduced nil)
-                        (-&gt; solution
-                            (assoc-in [:machines machine] end-time)
-                            (assoc-in [:jobs job] end-time)
-                            (update :tasks #(conj % (assoc task :end-time end-time)))))))
-                  {}
-                  tasks))
-        (constructo* tasks)))</pre></td></tr><tr><td class="docs"><p>Get the workspan of a solution.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn get-workspan
-  [solution]
-  (-&gt;&gt; solution
-       :machines
-       (map second)
-       (apply max)))</pre></td></tr><tr><td class="docs"><p>Searches for a solution and returns the best found in <code>timeout</code> milliseconds.
+  (sort (fn [a b] (if-not (= (a :job) (b :job))
+                    (compare (a :job) (b :job))
+                    (compare (a :id) (b :id))))
+        tasks))</pre></td></tr><tr><td class="docs"><p>Makes sure tasks are sorted by <code>:job</code>, then by <code>:id</code> and have <code>:id</code> values from 0 to n-1.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn clean-tasks
+  [tasks]
+  (let [sorted (sort-tasks tasks)]
+    (loop [clean         []
+           [head &amp; tail] sorted
+           id            0]
+      (if (empty? head)
+        clean
+        (recur
+         (conj clean (assoc head :id id))
+         tail
+         (inc id))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn by-job [tasks]
+  (into {} (map (fn [task] [(:id task) (:job task)])
+                tasks)))</pre></td></tr><tr><td class="docs"><p>Searches for a solution and returns the best found in <code>timeout</code> milliseconds.
   "Best" means the minimum workspan, given the <code>:endby</code> constraints encoded into the tasks.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn adequate-schedule
-  [millis tasks]
-  (with-timeout (+ millis 10)
-    (loop [time          (System/currentTimeMillis)
-           [head &amp; tail] (due-filter* tasks)
-           best          head]
-      (if (or (not head) (&lt; millis (- (System/currentTimeMillis) time)))
-        best
-        (let [best (if (&lt; (get-workspan head) (get-workspan best))
-                     head
-                     best)]
-          (recur time tail best))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_schejule.core">schejule.core</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+  [tasks millis]
+  (let [sols       (a/chan 1000)
+        tasks      (clean-tasks tasks)
+        job-lookup (by-job tasks)]
+    ; place solutions on channel
+    (&gt;!! sols :yohoho)
+    ; take solutions from channel retaining best
+    (&lt;!! sols)))</pre></td></tr><tr><td class="docs"><p>(use 'schejule.core-test)</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(adequate-schedule sample-2 600)</p>
+</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_schejule.analyser">schejule.analyser</li><li class="floating-toc-li" id="floating-toc_schejule.core">schejule.core</li><li class="floating-toc-li" id="floating-toc_schejule.generator">schejule.generator</li><li class="floating-toc-li" id="floating-toc_schejule">schejule</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
 SyntaxHighlighter.all();
 
 // hackity hack
