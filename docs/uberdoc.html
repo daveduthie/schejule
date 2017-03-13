@@ -2866,7 +2866,7 @@ net.brehaut.ClojureTools = (function (SH) {
   };
 })(SyntaxHighlighter);
 </script><title>schejule -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="github.com/daveduthie/schejule">schejule</a></h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>a job shop scheduling library for Clojure</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.8.0</td></tr><tr><td class="dep-name">org.clojure/core.logic</td><td class="dotted"><hr /></td><td class="dep-version">0.8.11</td></tr><tr><td class="dep-name">org.clojure/core.async</td><td class="dotted"><hr /></td><td class="dep-version">0.3.441</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#schejule.analyser">schejule.analyser</a></li><li><a href="#schejule.core">schejule.core</a></li><li><a href="#schejule.generator">schejule.generator</a></li><li><a href="#schejule">schejule</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.analyser" name="schejule.analyser"><h1 class="project-name">schejule.analyser</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.8.0</td></tr><tr><td class="dep-name">org.clojure/core.logic</td><td class="dotted"><hr /></td><td class="dep-version">0.8.11</td></tr><tr><td class="dep-name">org.clojure/core.async</td><td class="dotted"><hr /></td><td class="dep-version">0.3.441</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#schejule.analyser">schejule.analyser</a></li><li><a href="#schejule.generator">schejule.generator</a></li><li><a href="#schejule">schejule</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.analyser" name="schejule.analyser"><h1 class="project-name">schejule.analyser</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns schejule.analyser
   (:require [schejule.generator :as gen]))</pre></td></tr><tr><td class="docs"><p>(defn vec-subset?
   "Returns true if <code>sub</code> contains a subset of <code>a-vector</code>'s elements in the same order as <code>a-vector</code>.
@@ -2952,179 +2952,7 @@ a1 > b2 sub-implies a1 > b1</p>
   (if (some #(rule-implies? lookup % new-rule) rules)
     rules
     (conj (remove #(rule-implies? lookup new-rule %) rules)
-          new-rule)))</pre></td></tr><tr><td class="docs"><p>(defn accrete-rules [tasks rules new-rule]
-  (if (some #(vec-subset? % new-rule) rules)
-    rules
-    (conj (remove #(vec-subset? new-rule %) rules)
-          new-rule)))</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(use 'schejule.core-test)</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-failure
-  {:machines {9 271, 7 268, 2 343, 1 460},
-   :jobs {"aag368" 271, "qrs991" 268, "twb787" 186, "xyo468" 460},
-   :tasks '({:id 4, :job "xyo468", :machine 1, :duration 117, :endby 274, :ord 4, :end-time 460}
-            {:id 3, :job "xyo468", :machine 2, :duration 157, :ord 3, :end-time 343}
-            {:id 2, :job "twb787", :machine 2, :duration 186, :ord 2, :end-time 186}
-            {:id 1, :job "qrs991", :machine 7, :duration 268, :ord 1, :end-time 268}
-            {:id 0, :job "aag368", :machine 9, :duration 271, :ord 0, :end-time 271}),
-   :failure 4})</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure
-  {:machines {5 215, 11 311, 4 781, 7 946, 9 1099},
-   :jobs {"brq890" 946, "jtj163" 927, "pke479" 1099},
-   :tasks '({:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 7, :end-time 1099}
-            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 6, :end-time 927}
-            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 5, :end-time 781}
-            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 4, :end-time 946}
-            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 3, :end-time 685}
-            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 2, :end-time 601}
-            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
-            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
-   :failure 7})</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(distil-rule a-big-failure)
-((3 5) (6 7))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure-2
-  {:machines {5 215, 11 311, 4 781, 7 1042, 9 1015},
-   :jobs {"brq890" 1042, "jtj163" 843, "pke479" 1015},
-   :tasks '({:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 7, :end-time 1015}
-            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 6, :end-time 843}
-            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 5, :end-time 1042}
-            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 4, :end-time 781}
-            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 3, :end-time 697}
-            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 2, :end-time 601}
-            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
-            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
-   :failure 7})</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(distil-rule a-big-failure-2)
-((2 5) (6 7))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>=>(0 1 2 5 6 7)</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(accrete-rules (schejule/by-job (:tasks a-big-failure-2))
-               '(((3 5) (6 7)))
-               '((2 5) (6 7)))
-=>((0 1 2 5 6 7))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(some #(and (% :failure) %) (simulate-schedule* sample-1-cleaned ['(0 1 2 5 6 7)]))</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def a-big-failure-3
-  {:machines {5 1918, 11 311, 4 1983, 7 1212, 9 812, 0 114, 3 1429, 6 880},
-   :jobs {&quot;brq890&quot; 946, &quot;jtj163&quot; 242, &quot;pke479&quot; 414, &quot;uym843&quot; 880, &quot;wim276&quot; 1983},
-   :tasks '({:id 17, :job &quot;wim276&quot;, :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1983}
-            {:id 16, :job &quot;wim276&quot;, :machine 5, :duration 234, :ord 16, :end-time 1918}
-            {:id 15, :job &quot;wim276&quot;, :machine 5, :duration 255, :ord 15, :end-time 1684}
-            {:id 14, :job &quot;wim276&quot;, :machine 3, :duration 217, :ord 14, :end-time 1429}
-            {:id 13, :job &quot;wim276&quot;, :machine 7, :duration 266, :ord 13, :end-time 1212}
-            {:id 12, :job &quot;uym843&quot;, :machine 6, :duration 68, :endby 6800, :ord 12, :end-time 880}
-            {:id 11, :job &quot;uym843&quot;, :machine 9, :duration 61, :ord 11, :end-time 812}
-            {:id 10, :job &quot;uym843&quot;, :machine 3, :duration 293, :ord 10, :end-time 751}
-            {:id 9, :job &quot;uym843&quot;, :machine 5, :duration 243, :ord 9, :end-time 458}
-            {:id 8, :job &quot;uym843&quot;, :machine 0, :duration 114, :ord 8, :end-time 114}
-            {:id 7, :job &quot;pke479&quot;, :machine 9, :duration 172, :endby 600, :ord 7, :end-time 414}
-            {:id 6, :job &quot;jtj163&quot;, :machine 9, :duration 146, :ord 6, :end-time 242}
-            {:id 4, :job &quot;brq890&quot;, :machine 7, :duration 261, :ord 5, :end-time 946}
-            {:id 3, :job &quot;brq890&quot;, :machine 4, :duration 84, :ord 4, :end-time 685}
-            {:id 2, :job &quot;brq890&quot;, :machine 4, :duration 290, :ord 3, :end-time 601}
-            {:id 5, :job &quot;jtj163&quot;, :machine 4, :duration 96, :ord 2, :end-time 96}
-            {:id 1, :job &quot;brq890&quot;, :machine 11, :duration 96, :ord 1, :end-time 311}
-            {:id 0, :job &quot;brq890&quot;, :machine 5, :duration 215, :ord 0, :end-time 215}),
-   :failure 17})</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(distil-rule a-big-failure-3)</pre></td></tr><tr><td class="docs"><p>((4 13))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>=>(0 1 2 3 4 13 14 15 16 17)</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(accrete-rules (schejule/by-job (:tasks a-big-failure-3)) '(((2 5) (6 7))) '((4 13)))</pre></td></tr><tr><td class="docs"><p>(((4 13)) ((2 5) (6 7)))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>=>((0 1 2 3 4 13 14 15 16 17) (0 1 2 5 6 7))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(some #(and (% :failure) %) (simulate-schedule* sample-1-cleaned '((0 1 2 3 4 13 14 15 16 17) (0 1 2 5 6 7))))</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def a-big-failure-4
-  {:machines {5 1457, 11 311, 4 1522, 7 946, 9 812, 0 114, 3 968, 6 880},
-   :jobs {&quot;brq890&quot; 946, &quot;jtj163&quot; 242, &quot;wim276&quot; 1522, &quot;pke479&quot; 414, &quot;uym843&quot; 880},
-   :tasks '({:id 17, :job &quot;wim276&quot;, :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1522}
-            {:id 16, :job &quot;wim276&quot;, :machine 5, :duration 234, :ord 16, :end-time 1457}
-            {:id 15, :job &quot;wim276&quot;, :machine 5, :duration 255, :ord 15, :end-time 1223}
-            {:id 14, :job &quot;wim276&quot;, :machine 3, :duration 217, :ord 14, :end-time 968}
-            {:id 12, :job &quot;uym843&quot;, :machine 6, :duration 68, :endby 6800, :ord 13, :end-time 880}
-            {:id 11, :job &quot;uym843&quot;, :machine 9, :duration 61, :ord 12, :end-time 812}
-            {:id 10, :job &quot;uym843&quot;, :machine 3, :duration 293, :ord 11, :end-time 751}
-            {:id 9, :job &quot;uym843&quot;, :machine 5, :duration 243, :ord 10, :end-time 458}
-            {:id 8, :job &quot;uym843&quot;, :machine 0, :duration 114, :ord 9, :end-time 114}
-            {:id 7, :job &quot;pke479&quot;, :machine 9, :duration 172, :endby 600, :ord 8, :end-time 414}
-            {:id 6, :job &quot;jtj163&quot;, :machine 9, :duration 146, :ord 7, :end-time 242}
-            {:id 4, :job &quot;brq890&quot;, :machine 7, :duration 261, :ord 6, :end-time 946}
-            {:id 13, :job &quot;wim276&quot;, :machine 7, :duration 266, :ord 5, :end-time 266}
-            {:id 3, :job &quot;brq890&quot;, :machine 4, :duration 84, :ord 4, :end-time 685}
-            {:id 2, :job &quot;brq890&quot;, :machine 4, :duration 290, :ord 3, :end-time 601}
-            {:id 5, :job &quot;jtj163&quot;, :machine 4, :duration 96, :ord 2, :end-time 96}
-            {:id 1, :job &quot;brq890&quot;, :machine 11, :duration 96, :ord 1, :end-time 311}
-            {:id 0, :job &quot;brq890&quot;, :machine 5, :duration 215, :ord 0, :end-time 215}),
-   :failure 17})</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(distil-rule a-big-failure-4)</pre></td></tr><tr><td class="docs"><p>((0 9) (10 14))</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(accrete-rules (schejule/by-job (:tasks a-big-failure-4))
-               '(((4 13))
-                 ((2 5) (6 7)))
-               '((0 9) (10 14)))</pre></td></tr><tr><td class="docs"><p>(((0 9) (10 14)) ((4 13)) ((2 5) (6 7)))</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def a-big-failure-5
-  {:machines {4 1421, 9 711, 0 114, 5 1356, 7 1303, 11 668, 3 867, 6 779},
-   :jobs {&quot;jtj163&quot; 242, &quot;pke479&quot; 414, &quot;uym843&quot; 779, &quot;wim276&quot; 1421, &quot;brq890&quot; 1303},
-   :tasks '({:id 17, :job &quot;wim276&quot;, :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1421}
-            {:id 16, :job &quot;wim276&quot;, :machine 5, :duration 234, :ord 16, :end-time 1356}
-            {:id 15, :job &quot;wim276&quot;, :machine 5, :duration 255, :ord 15, :end-time 1122}
-            {:id 14, :job &quot;wim276&quot;, :machine 3, :duration 217, :ord 14, :end-time 867}
-            {:id 12, :job &quot;uym843&quot;, :machine 6, :duration 68, :endby 6800, :ord 13, :end-time 779}
-            {:id 11, :job &quot;uym843&quot;, :machine 9, :duration 61, :ord 12, :end-time 711}
-            {:id 10, :job &quot;uym843&quot;, :machine 3, :duration 293, :ord 11, :end-time 650}
-            {:id 4, :job &quot;brq890&quot;, :machine 7, :duration 261, :ord 10, :end-time 1303}
-            {:id 3, :job &quot;brq890&quot;, :machine 4, :duration 84, :ord 9, :end-time 1042}
-            {:id 2, :job &quot;brq890&quot;, :machine 4, :duration 290, :ord 8, :end-time 958}
-            {:id 1, :job &quot;brq890&quot;, :machine 11, :duration 96, :ord 7, :end-time 668}
-            {:id 0, :job &quot;brq890&quot;, :machine 5, :duration 215, :ord 6, :end-time 572}
-            {:id 13, :job &quot;wim276&quot;, :machine 7, :duration 266, :ord 5, :end-time 266}
-            {:id 9, :job &quot;uym843&quot;, :machine 5, :duration 243, :ord 4, :end-time 357}
-            {:id 8, :job &quot;uym843&quot;, :machine 0, :duration 114, :ord 3, :end-time 114}
-            {:id 7, :job &quot;pke479&quot;, :machine 9, :duration 172, :endby 600, :ord 2, :end-time 414}
-            {:id 6, :job &quot;jtj163&quot;, :machine 9, :duration 146, :ord 1, :end-time 242}
-            {:id 5, :job &quot;jtj163&quot;, :machine 4, :duration 96, :ord 0, :end-time 96}),
-   :failure 17})</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(distil-rule a-big-failure-5)</pre></td></tr><tr><td class="docs"><p>((10 14))</p>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(accrete-rules (schejule/by-job (:tasks a-big-failure-5))
-               '(((0 9) (10 14)) ((4 13)) ((2 5) (6 7)))
-               '((10 14)))</pre></td></tr><tr><td class="docs"><p> Why? (0 9 10 14 15 16 17)
-      (8 9 10 14 15 16 17)
-       ?</p>
-</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.core" name="schejule.core"><h1 class="project-name">schejule.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(ns schejule.core
-  (:refer-clojure :exclude [==])
-  (:require [clojure.core.logic :refer [== all conde conso defne everyg
-                                        fresh lvar nilo run* succeed] :as l]
-            [clojure.core.logic.fd :as fd]))</pre></td></tr><tr><td class="docs"><p>TODO: split functions into separate namespaces:
-generator - solvo<em>, constructo</em> and (as yet unwritten relational constraint specifier)
-analyser - due-filter* and constraint finder</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><h2>Helper functions</h2>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defne notmaxo [x l]
-  ([x [e]] (fd/&lt; x e))
-  ([x [h1 h2 . t]]
-   (fresh [l']
-     (conde
-      [(fd/&gt;  h1 h2) (conso h1 t l')]
-      [(fd/&lt;= h1 h2) (conso h2 t l')])
-     (notmaxo x l'))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(run* [q]
-  (fd/in q (fd/interval 100))
-  (notmaxo q [3 4 1]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defne not-orderedo [l]
-  ;; ([[h1 t]] (fd/&lt; h t))
-  ([[h1 h2 . t]]
-   (fresh [l']
-     (conde
-      [(fd/&lt; h2 h1)]
-      [(conso h2 t l') (not-orderedo l')]))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(let [vars (repeatedly 4 lvar)
-      constrained-lvars ()]
-  (l/run 10 [q]
-    (== q vars)
-    (fd/distinct vars)
-    (everyg #(fd/in % (fd/interval 3)) vars)
-    (not-orderedo vars)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.generator" name="schejule.generator"><h1 class="project-name">schejule.generator</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+          new-rule)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#schejule.generator" name="schejule.generator"><h1 class="project-name">schejule.generator</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns schejule.generator
   (:refer-clojure :exclude [==])
   (:require [clojure.core.logic :refer [== all defne everyg lvar run* succeed] :as l]
@@ -3199,25 +3027,163 @@ then realising the rest of the results.</p>
            id            0]
       (if (empty? head)
         clean
-        (recur
-         (conj clean (assoc head :id id))
-         tail
-         (inc id))))))</pre></td></tr><tr><td class="docs">
+        (recur (conj clean (assoc head :id id)) tail (inc id))))))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(defn by-job [tasks]
   (into {} (map (fn [task] [(:id task) (:job task)])
-                tasks)))</pre></td></tr><tr><td class="docs"><p>Searches for a solution and returns the best found in <code>timeout</code> milliseconds.
+                tasks)))</pre></td></tr><tr><td class="docs"><h2>Entrypoint</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Searches for a solution and returns the best found in <code>timeout</code> milliseconds.
   "Best" means the minimum workspan, given the <code>:endby</code> constraints encoded into the tasks.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn adequate-schedule
   [tasks millis]
-  (let [sols       (a/chan 1000)
-        tasks      (clean-tasks tasks)
-        job-lookup (by-job tasks)]
-    ; place solutions on channel
-    (&gt;!! sols :yohoho)
-    ; take solutions from channel retaining best
-    (&lt;!! sols)))</pre></td></tr><tr><td class="docs"><p>(use 'schejule.core-test)</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(adequate-schedule sample-2 600)</p>
-</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_schejule.analyser">schejule.analyser</li><li class="floating-toc-li" id="floating-toc_schejule.core">schejule.core</li><li class="floating-toc-li" id="floating-toc_schejule.generator">schejule.generator</li><li class="floating-toc-li" id="floating-toc_schejule">schejule</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+  (let [tasks      (clean-tasks tasks)
+        job-lookup (by-job tasks)
+        failures   (agent nil)
+        sols       (agent nil)
+        f
+        (future (loop [rules        []
+                       [s &amp; others] (z/simulate-schedule* tasks [])]
+                  (if (not (Thread/interrupted))
+                    (if (s :failure)
+                      (let [new-rules (z/accrete-rules job-lookup rules (z/distil-rule s))]
+                        (prn (str &quot;Failure: &quot; (s :failure)))
+                        (prn (str &quot;New Rules: &quot; new-rules))
+                        (send failures (fn [old] (update old (s :failure) #(inc (or % 0)))))
+                        (recur new-rules (z/simulate-schedule* tasks new-rules)))
+                      (let [current (z/get-workspan s)]
+                        (prn (str &quot;Success: &quot; current))
+                        (send sols (fn [b] (if (or (nil? b)
+                                                  (&lt; current (:workspan b)))
+                                            (assoc s :workspan current)
+                                            b)))
+                        (recur rules others)))
+                    nil)))]
+    (Thread/sleep millis)
+    (future-cancel f)
+    (assoc @sols :failures @failures)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(use 'schejule-test)</pre></td></tr><tr><td class="docs"><p>(def failures (atom nil))
+(add-watch failures :yo (fn [_ _ _ state] (prn state)))
+(adequate-schedule schejule-test/sample-1 500)
+(adequate-schedule schejule-test/sample-3 (* 60000 5))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure
+  {:machines {5 215, 11 311, 4 781, 7 946, 9 1099},
+   :jobs {"brq890" 946, "jtj163" 927, "pke479" 1099},
+   :tasks '({:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 7, :end-time 1099}
+            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 6, :end-time 927}
+            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 5, :end-time 781}
+            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 4, :end-time 946}
+            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 3, :end-time 685}
+            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 2, :end-time 601}
+            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 7})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(distil-rule a-big-failure)
+((3 5) (6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure-2
+  {:machines {5 215, 11 311, 4 781, 7 1042, 9 1015},
+   :jobs {"brq890" 1042, "jtj163" 843, "pke479" 1015},
+   :tasks '({:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 7, :end-time 1015}
+            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 6, :end-time 843}
+            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 5, :end-time 1042}
+            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 4, :end-time 781}
+            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 3, :end-time 697}
+            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 2, :end-time 601}
+            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 7})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(distil-rule a-big-failure-2)
+((2 5) (6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>=>(0 1 2 5 6 7)</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(accrete-rules (schejule/by-job (:tasks a-big-failure-2))
+               '(((3 5) (6 7)))
+               '((2 5) (6 7)))
+=>((0 1 2 5 6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(some #(and (% :failure) %) (simulate-schedule* sample-1-cleaned ['(0 1 2 5 6 7)]))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure-3
+  {:machines {5 1918, 11 311, 4 1983, 7 1212, 9 812, 0 114, 3 1429, 6 880},
+   :jobs {"brq890" 946, "jtj163" 242, "pke479" 414, "uym843" 880, "wim276" 1983},
+   :tasks '({:id 17, :job "wim276", :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1983}
+            {:id 16, :job "wim276", :machine 5, :duration 234, :ord 16, :end-time 1918}
+            {:id 15, :job "wim276", :machine 5, :duration 255, :ord 15, :end-time 1684}
+            {:id 14, :job "wim276", :machine 3, :duration 217, :ord 14, :end-time 1429}
+            {:id 13, :job "wim276", :machine 7, :duration 266, :ord 13, :end-time 1212}
+            {:id 12, :job "uym843", :machine 6, :duration 68, :endby 6800, :ord 12, :end-time 880}
+            {:id 11, :job "uym843", :machine 9, :duration 61, :ord 11, :end-time 812}
+            {:id 10, :job "uym843", :machine 3, :duration 293, :ord 10, :end-time 751}
+            {:id 9, :job "uym843", :machine 5, :duration 243, :ord 9, :end-time 458}
+            {:id 8, :job "uym843", :machine 0, :duration 114, :ord 8, :end-time 114}
+            {:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 7, :end-time 414}
+            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 6, :end-time 242}
+            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 5, :end-time 946}
+            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 4, :end-time 685}
+            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 3, :end-time 601}
+            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 2, :end-time 96}
+            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 17})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(z/distil-rule a-big-failure-3)
+((4 13))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>=>(0 1 2 3 4 13 14 15 16 17)</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(z/accrete-rules (by-job (:tasks a-big-failure-3)) '(((2 5) (6 7))) '((4 13)))
+(((4 13)) ((2 5) (6 7)))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>=>((0 1 2 3 4 13 14 15 16 17) (0 1 2 5 6 7))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(some #(and (% :failure) %) (simulate-schedule* sample-1-cleaned '((0 1 2 3 4 13 14 15 16 17) (0 1 2 5 6 7))))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure-4
+  {:machines {5 1457, 11 311, 4 1522, 7 946, 9 812, 0 114, 3 968, 6 880},
+   :jobs {"brq890" 946, "jtj163" 242, "wim276" 1522, "pke479" 414, "uym843" 880},
+   :tasks '({:id 17, :job "wim276", :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1522}
+            {:id 16, :job "wim276", :machine 5, :duration 234, :ord 16, :end-time 1457}
+            {:id 15, :job "wim276", :machine 5, :duration 255, :ord 15, :end-time 1223}
+            {:id 14, :job "wim276", :machine 3, :duration 217, :ord 14, :end-time 968}
+            {:id 12, :job "uym843", :machine 6, :duration 68, :endby 6800, :ord 13, :end-time 880}
+            {:id 11, :job "uym843", :machine 9, :duration 61, :ord 12, :end-time 812}
+            {:id 10, :job "uym843", :machine 3, :duration 293, :ord 11, :end-time 751}
+            {:id 9, :job "uym843", :machine 5, :duration 243, :ord 10, :end-time 458}
+            {:id 8, :job "uym843", :machine 0, :duration 114, :ord 9, :end-time 114}
+            {:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 8, :end-time 414}
+            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 7, :end-time 242}
+            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 6, :end-time 946}
+            {:id 13, :job "wim276", :machine 7, :duration 266, :ord 5, :end-time 266}
+            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 4, :end-time 685}
+            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 3, :end-time 601}
+            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 2, :end-time 96}
+            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 1, :end-time 311}
+            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 0, :end-time 215}),
+   :failure 17})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(z/distil-rule a-big-failure-4)
+((0 9) (10 14))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(z/accrete-rules (by-job (:tasks a-big-failure-4))
+               '(((4 13))
+                 ((2 5) (6 7)))
+               '((0 9) (10 14)))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(((0 9) (10 14)) ((4 13)) ((2 5) (6 7)))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(def a-big-failure-5
+  {:machines {4 1421, 9 711, 0 114, 5 1356, 7 1303, 11 668, 3 867, 6 779},
+   :jobs {"jtj163" 242, "pke479" 414, "uym843" 779, "wim276" 1421, "brq890" 1303},
+   :tasks '({:id 17, :job "wim276", :machine 4, :duration 65, :endby 1037, :ord 17, :end-time 1421}
+            {:id 16, :job "wim276", :machine 5, :duration 234, :ord 16, :end-time 1356}
+            {:id 15, :job "wim276", :machine 5, :duration 255, :ord 15, :end-time 1122}
+            {:id 14, :job "wim276", :machine 3, :duration 217, :ord 14, :end-time 867}
+            {:id 12, :job "uym843", :machine 6, :duration 68, :endby 6800, :ord 13, :end-time 779}
+            {:id 11, :job "uym843", :machine 9, :duration 61, :ord 12, :end-time 711}
+            {:id 10, :job "uym843", :machine 3, :duration 293, :ord 11, :end-time 650}
+            {:id 4, :job "brq890", :machine 7, :duration 261, :ord 10, :end-time 1303}
+            {:id 3, :job "brq890", :machine 4, :duration 84, :ord 9, :end-time 1042}
+            {:id 2, :job "brq890", :machine 4, :duration 290, :ord 8, :end-time 958}
+            {:id 1, :job "brq890", :machine 11, :duration 96, :ord 7, :end-time 668}
+            {:id 0, :job "brq890", :machine 5, :duration 215, :ord 6, :end-time 572}
+            {:id 13, :job "wim276", :machine 7, :duration 266, :ord 5, :end-time 266}
+            {:id 9, :job "uym843", :machine 5, :duration 243, :ord 4, :end-time 357}
+            {:id 8, :job "uym843", :machine 0, :duration 114, :ord 3, :end-time 114}
+            {:id 7, :job "pke479", :machine 9, :duration 172, :endby 600, :ord 2, :end-time 414}
+            {:id 6, :job "jtj163", :machine 9, :duration 146, :ord 1, :end-time 242}
+            {:id 5, :job "jtj163", :machine 4, :duration 96, :ord 0, :end-time 96}),
+   :failure 17})</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(z/distil-rule a-big-failure-5)
+((10 14))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>(z/accrete-rules (by-job (:tasks a-big-failure-5))
+               '(((0 9) (10 14)) ((4 13)) ((2 5) (6 7)))
+               '((10 14)))</p>
+</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_schejule.analyser">schejule.analyser</li><li class="floating-toc-li" id="floating-toc_schejule.generator">schejule.generator</li><li class="floating-toc-li" id="floating-toc_schejule">schejule</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
 SyntaxHighlighter.all();
 
 // hackity hack
