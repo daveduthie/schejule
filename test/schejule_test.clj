@@ -39,6 +39,8 @@
           []
           (range n)))
 
+;; Some sample data
+
 (def sample-1
   [{:id 0, :job "brq890", :machine 5, :duration 215}
    {:id 1, :job "brq890", :machine 11, :duration 96}
@@ -133,6 +135,8 @@
 
    {:id 49, :job "lgt782", :machine 6, :duration 275 :endby 350}])
 
+;; `:id`s may not run from 0 to n so there's a clean-tasks fn in schejule namespace.
+;; These tasks are as above, but run through clean-tasks.
 (def sample-2-cleaned
   [{:id 0, :job "aag368", :machine 9, :duration 271}
    {:id 1, :job "qrs991", :machine 7, :duration 268}
@@ -159,3 +163,56 @@
    {:id 15, :job "wim276", :machine 5, :duration 255}
    {:id 16, :job "wim276", :machine 5, :duration 234}
    {:id 17, :job "wim276", :machine 4, :duration 65, :endby 1037}])
+
+;; (clean-tasks sample-3)
+(def sample-3-cleaned
+  [{:id 0, :job "bqd174", :machine 6, :duration 245}
+   {:id 1, :job "bqd174", :machine 4, :duration 295}
+   {:id 2, :job "bqd174", :machine 8, :duration 228}
+   {:id 3, :job "bqd174", :machine 4, :duration 109}
+   {:id 4, :job "bqd174", :machine 8, :duration 96}
+   {:id 5, :job "fyf071", :machine 0, :duration 91}
+   {:id 6, :job "fyf071", :machine 8, :duration 207}
+   {:id 7, :job "fyf071", :machine 9, :duration 72}
+   {:id 8, :job "fyf071", :machine 3, :duration 213}
+   {:id 9, :job "fyf071", :machine 7, :duration 131}
+   {:id 10, :job "lgt782", :machine 6, :duration 275, :endby 350}
+   {:id 11, :job "obu084", :machine 2, :duration 116}
+   {:id 12, :job "obu084", :machine 2, :duration 172}
+   {:id 13, :job "obu084", :machine 10, :duration 140}
+   {:id 14, :job "obu084", :machine 1, :duration 128}
+   {:id 15, :job "obu084", :machine 11, :duration 270}
+   {:id 16, :job "opm162", :machine 8, :duration 295}
+   {:id 17, :job "opm162", :machine 11, :duration 176}
+   {:id 18, :job "tzj588", :machine 9, :duration 285}
+   {:id 19, :job "tzj588", :machine 9, :duration 299}
+   {:id 20, :job "tzj588", :machine 2, :duration 140}
+   {:id 21, :job "ufy692", :machine 0, :duration 242}
+   {:id 22, :job "ufy692", :machine 8, :duration 147}
+   {:id 23, :job "ufy692", :machine 9, :duration 82}
+   {:id 24, :job "ufy692", :machine 7, :duration 166}
+   {:id 25, :job "ufy692", :machine 7, :duration 151}
+   {:id 26, :job "umj484", :machine 0, :duration 98}
+   {:id 27, :job "umj484", :machine 8, :duration 130}
+   {:id 28, :job "umj484", :machine 8, :duration 80}
+   {:id 29, :job "umj484", :machine 3, :duration 64}
+   {:id 30, :job "umj484", :machine 6, :duration 288}
+   {:id 31, :job "xcx565", :machine 3, :duration 268}
+   {:id 32, :job "xcx565", :machine 3, :duration 200}
+   {:id 33, :job "xcx565", :machine 4, :duration 131}
+   {:id 34, :job "xcx565", :machine 5, :duration 228}
+   {:id 35, :job "xcx565", :machine 1, :duration 107}
+   {:id 36, :job "ybc374", :machine 10, :duration 116}
+   {:id 37, :job "ybc374", :machine 2, :duration 70}
+   {:id 38, :job "ybc374", :machine 4, :duration 249}
+   {:id 39, :job "ybc374", :machine 6, :duration 208}
+   {:id 40, :job "ysx968", :machine 2, :duration 140}
+   {:id 41, :job "ysx968", :machine 4, :duration 65}
+   {:id 42, :job "ysx968", :machine 9, :duration 219}
+   {:id 43, :job "ysx968", :machine 7, :duration 219}
+   {:id 44, :job "ysx968", :machine 10, :duration 179}
+   {:id 45, :job "yuo576", :machine 5, :duration 136}
+   {:id 46, :job "yuo576", :machine 4, :duration 80}
+   {:id 47, :job "yuo576", :machine 11, :duration 257}
+   {:id 48, :job "yuo576", :machine 7, :duration 233}
+   {:id 49, :job "yuo576", :machine 5, :duration 169, :endby 1075}])
