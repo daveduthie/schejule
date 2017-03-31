@@ -70,36 +70,11 @@
       (recur current tail bottleneck start))))
 
 (defn disjunctive-pairs
-  "Wraps `distil-rule`, trimming result to focus on first and last tasks in each job"
+  "Trims a sequence of tasks to focus on first and last tasks in each job"
   [job-lookup bad-schedule]
   (partition 2 (rest (mapcat (fn [tasks] [(first tasks) (last tasks)])
                              (partition-by job-lookup bad-schedule)))))
 
-;; (disjunctive-pairs
-;;  {0 "bqd174", 7 "fyf071", 20 "tzj588", 27 "umj484", 1 "bqd174", 24 "ufy692", 39 "ybc374", 46 "yuo576", 4 "bqd174", 15 "obu084", 48 "yuo576", 21 "ufy692", 31 "xcx565", 32 "xcx565", 40 "ysx968", 33 "xcx565", 13 "obu084", 22 "ufy692", 36 "ybc374", 41 "ysx968", 43 "ysx968", 29 "umj484", 44 "ysx968", 6 "fyf071", 28 "umj484", 25 "ufy692", 34 "xcx565", 17 "opm162", 3 "bqd174", 12 "obu084", 2 "bqd174", 23 "ufy692", 47 "yuo576", 35 "xcx565", 19 "tzj588", 11 "obu084", 9 "fyf071", 5 "fyf071", 14 "obu084", 45 "yuo576", 26 "umj484", 16 "opm162", 38 "ybc374", 30 "umj484", 10 "lgt782", 18 "tzj588", 42 "ysx968", 37 "ybc374", 8 "fyf071", 49 "yuo576"}
-;;  '(10 0 1 2 3 4 22 27 28 29 31 32 33 38 41 42 43 48 49))
-
-;; (defn implies?
-;;   "Checks whether t1 implies t2"
-;;   [lookup [a b] [c d]]
-;;   (or (and (= a c) (= b d))
-;;       (and (and (= (lookup a) (lookup c))
-;;                 (= (lookup b) (lookup d)))
-;;            (and (<= a c) (>= b d)))))
-
-;; (defn rule-implies?
-;;   "Checks whether a rule implies another rule"
-;;   [lookup rule1 rule2]
-;;   (loop [r1 rule1
-;;          r2 rule2]
-;;     (cond
-;;       (nil? r1)                               true
-;;       (nil? r2)                               false
-;;       (implies? lookup (first r1) (first r2)) (recur (next r1) (next r2))
-;;       :else                                   (recur r1 (next r2)))))
-
-;; This needs to get smarter
-;; a1 > b2 sub-implies a1 > b1
 (defn accrete-rules
   "Yeah"
   [job-lookup rules failure]
