@@ -45,11 +45,6 @@
 
        (gen/gen-schedule* tasks constraints)))
 
-;; TODO: write distil-rule. It should take a map describing a failed schedule, as emitted by `simulate-schedule*`, and return the smallest possible set of tasks which cannot precede the failed task (or one of its predecessors).
-
-;; 2017-03-13 01:23 NEW THINKING
-;; Bind only tasks at job-boundaries for less binding overall
-;; rather than [a . b c d . e f] -> [a b] [d e] -> [a b d e]
 (defn distil-rule
   "'Rewinds' a bad schedule to identify which subsequence of tasks contributed to the failure"
   [bad-schedule]
