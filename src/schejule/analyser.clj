@@ -2,7 +2,7 @@
   (:require [schejule.generator :as gen]))
 
 (defn subseq?
-  "Returns true if `sub` contains a subset of `a-vector`'s elements in the same order as `a-vector`.
+  "Returns true if `s` contains a subset of `coll`'s elements in the same order as they appear in `coll`.
   Returns false otherwise."
   [s coll]
   (loop [v1 s
