@@ -2903,12 +2903,7 @@ net.brehaut.ClojureTools = (function (SH) {
                          new-sol))))
                  {}
                  tasks))
-       (gen/gen-schedule* tasks constraints)))</pre></td></tr><tr><td class="docs"><p>TODO: write distil-rule. It should take a map describing a failed schedule, as emitted by <code>simulate-schedule*</code>, and return the smallest possible set of tasks which cannot precede the failed task (or one of its predecessors).</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>'Rewinds' a bad schedule to identify which subsequence of tasks contributed to the failure</p>
-
-<p>2017-03-13 01:23 NEW THINKING
-Bind only tasks at job-boundaries for less binding overall
-rather than [a . b c d . e f] -> [a b] [d e] -> [a b d e]</p>
+       (gen/gen-schedule* tasks constraints)))</pre></td></tr><tr><td class="docs"><p>'Rewinds' a bad schedule to identify which subsequence of tasks contributed to the failure</p>
 </td><td class="codes"><pre class="brush: clojure">(defn distil-rule
   [bad-schedule]
   (loop [current       (first (bad-schedule :tasks))
